@@ -19,7 +19,7 @@ To install or update, run
 
     go install github.com/cespare/goclj/cljfmt@latest
 
-(You'll need Go 1.16+.) Alternatively, you can download a clfjmt binary from the
+Alternatively, you can download a clfjmt binary from the
 [Releases page](https://github.com/cespare/goclj/releases).
 
 Here is the output of `cljfmt -h`:
@@ -32,6 +32,7 @@ cljfmt reads from standard input.
 Flags:
   -c value
         path to config file (default /home/caleb/.cljfmt)
+  -d	output a unified diff of the changes cljfmt would make
   -disable-transform value
         turn off the named transform (default none)
   -enable-transform value

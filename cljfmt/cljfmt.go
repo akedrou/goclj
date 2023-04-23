@@ -5,11 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/akedrou/textdiff"
 
 	"github.com/cespare/goclj/format"
 	"github.com/cespare/goclj/parse"
@@ -33,6 +34,7 @@ type config struct {
 	threadFirstOverrides map[string]format.ThreadFirstStyle
 	transforms           map[format.Transform]bool
 	list                 bool
+	diff                 bool
 	write                bool
 }
 
@@ -54,6 +56,8 @@ func main() {
 	flag.Var(&configFile, "c", "path to config file")
 	flag.BoolVar(&conf.list, "l", false,
 		"print files whose formatting differs from cljfmt's")
+	flag.BoolVar(&conf.diff, "d", false,
+		"output a unified diff of the changes cljfmt would make")
 	flag.BoolVar(&conf.write, "w", false,
 		"write result to (source) file instead of stdout")
 	flag.Var(transformFlag{conf.transforms, true}, "enable-transform",
@@ -64,6 +68,10 @@ func main() {
 	flag.Parse()
 
 	conf.parseDotConfigFile(configFile)
+
+	if conf.diff && (conf.list || conf.write) {
+		log.Fatal("cannot use -d with -l or -w")
+	}
 
 	if flag.NArg() == 0 {
 		if conf.write {
@@ -218,12 +226,25 @@ func (c *config) processFile(filename string, in io.Reader) error {
 			fmt.Println(filename)
 		}
 		if c.write {
-			if err := ioutil.WriteFile(filename, buf2.Bytes(), perm); err != nil {
+			if err := os.WriteFile(filename, buf2.Bytes(), perm); err != nil {
 				return err
 			}
 		}
+		if c.diff {
+			d, err := textdiff.ToUnified(
+				filepath.Join("a", filename),
+				filepath.Join("b", filename),
+				buf1.String(),
+				textdiff.Bytes(buf1.Bytes(), buf2.Bytes()),
+				3,
+			)
+			if err != nil {
+				return err
+			}
+			fmt.Print(d)
+		}
 	}
-	if !c.list && !c.write {
+	if !c.list && !c.write && !c.diff {
 		io.Copy(os.Stdout, &buf2)
 	}
 	return nil
